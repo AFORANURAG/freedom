@@ -1,0 +1,66 @@
+1. In the Monkey programming language everything besides let and return statements is an ex-
+pression. These expressions come in different varieties.(47th page)
+
+2. The parsing approach described by all three, which is called Top Down Operator Precedence
+Parsing, or Pratt parsing, was invented as an alternative to parsers based on context-free gram-
+mars and the Backus-Naur-Form.(48)
+
+3. Instead of associating parsing functions (think of our
+parseLetStatement method here) with grammar rules (defined in BNF or EBNF), Pratt asso-
+ciates these functions (which he calls “semantic code”) with single token types. A crucial part
+of this idea is that each token type can have two parsing functions associated with it, depending
+on the token’s position - infix or prefix.(48)
+
+4.The other term we already stumbled upon and will find again later is operator precedence.
+And alternative term for this is order of operations, which should make clearer what operator
+precedence describes: which priority do different operators have. The canonical example is this
+one, which we saw earlier:
+
+5. A Pratt parser’s main idea is the association of parsing functions (which Pratt calls “semantic
+code”) with token types. Whenever this token type is encountered, the parsing functions are
+called to parse the appropriate expression and return an AST node that represents it. Each
+token type can have up to two parsing functions associated with it, depending on whether the
+token is found in a prefix or an infix position.
+The first thing we need to do is to setup these associations. We define two types of functions:
+a prefix parsing functions and an infix parsing function.
+// parser/parser.go
+type (
+prefixParseFn func() ast.Expression
+infixParseFn func(ast.Expression) ast.Expression
+)(page 52)
+
+
+6. The algorithm behind the parseExpression method and its combination of parsing functions
+and precedences is fully described by Vaughan Pratt in his “Top Down Operator Precedence”
+paper. But there are differences between his and our implementation.(page 69)
+
+
+When parseExpression is called the value of precedence stands for the current “right-binding
+power” of the current parseExpression invocation. What does “right-binding power” mean?
+Well, the higher it is, the more tokens/operators/operands to the right of the current expressions
+(the future peek tokens) can we “bind” to it, or as I like to think, “suck in”.
+In case our current right-binding power is of the highest possible value, what we parsed so far
+(assigned to leftExp) is never passed to an infixParseFn associated with the next operator (or
+token). It will never end up as a “left” child node. Because the condition of the for-loop never
+evaluates to true.
+A counterpart to right-binding power exists and it’s called (you guessed it!) “left-binding
+power”. But which value signifies this left-binding power? Since the precedence argument in
+parseExpression stands for the current right-binding power, where does the left-binding power
+of the next operator come from? Simply put: from our call to peekPrecedence. The value this
+call returns stands for the left-binding power of the next operator, of p.peekToken.
+It all comes down to the precedence < p.peekPrecedence() condition of our for-loop. This
+condition checks if the left-binding power of the next operator/token is higher than our current
+right-binding power. If it is, what we parsed so far gets “sucked in” by the next operator, from
+left to right, and ends up being passed to the infixParseFn of the next operator.
+An example: let’s say we’re parsing the expression statement -1 + 2;. What we want the AST
+to represent is (-1) + 2 and not -(1 + 2). The first method we end up in (after parseEx-
+pressionStatement and parseExpression) is the prefixParseFn we associated with token.MINUS:
+parsePrefixExpression. To refresh our memory of parsePrefixExpression here it is in its en-
+tirety:(page 74)
+
+left binding power of infix operator is defined as the power to suck in
+for example, look at the below
+
+In the classic example for operator precedences 1 + 2 * 3, the left-binding power of * would be
+higher than the right-binding power of +. Parsing this would result in the 2 being passed to the
+infixParseFn associated with the * token.
