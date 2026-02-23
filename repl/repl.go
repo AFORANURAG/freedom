@@ -3,6 +3,7 @@ package repl
 import (
 	"bufio"
 	"fmt"
+	"freedom/evaluator"
 	"freedom/lexer"
 	"freedom/parser"
 	"io"
@@ -48,8 +49,17 @@ func Start(in io.Reader, out io.Writer) {
 			printParserErrors(out, p.Errors())
 			continue
 		}
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
+		evaluated := evaluator.Eval(program)
+		if evaluated != nil {
+			io.WriteString(out, "Evaluated\n")
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
+		} else {
+			io.WriteString(out, "Parsed\n")
+			io.WriteString(out, program.String())
+			io.WriteString(out, "\n")
+		}
+
 	}
 }
 func printParserErrors(out io.Writer, errors []string) {
