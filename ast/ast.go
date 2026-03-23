@@ -21,6 +21,7 @@ type Expression interface {
 	expressionNode()
 }
 
+// Expression produces value wherease Statement does not produce value
 // program is also a node
 type Program struct {
 	Statements []Statement
